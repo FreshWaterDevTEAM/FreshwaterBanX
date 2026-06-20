@@ -1,0 +1,18 @@
+# FreshwaterBanX-Bridge (Paper/Spigot) configuration.
+
+# Master switch for the bridge.
+enabled: true
+
+# Cancel Matrix's own punishment commands (PlayerViolationCommandEvent) so that all
+# kick/ban decisions are made by the FreshwaterBanX Velocity plugin instead.
+cancel-matrix-commands: true
+
+# Only forward a violation to the proxy once the player's VL reaches this value.
+# Lower = more messages but faster reaction; the proxy still decides the final action.
+min-violations-to-forward: 1
+
+# Optional label for this backend server, included in forwarded messages (purely informational).
+server-name: ""
+
+# Log every forwarded violation to the console.
+debug: false

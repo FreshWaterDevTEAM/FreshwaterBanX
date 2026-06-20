@@ -1,0 +1,8 @@
+name: FreshwaterBanX-Bridge
+version: 1.0.0
+main: io.freshwater.banx.bridge.FreshwaterBanXBridge
+api-version: "1.20"
+author: FreshwaterIsland
+description: Forwards Matrix anti-cheat violations to the FreshwaterBanX Velocity plugin.
+softdepend: [Matrix]
+load: POSTWORLD

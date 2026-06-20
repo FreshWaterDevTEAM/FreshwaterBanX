@@ -1,0 +1,132 @@
+# =====================================================================
+#  FreshwaterBanX - Velocity configuration
+#  Messages use MiniMessage formatting: https://docs.advntr.dev/minimessage/format.html
+#  Placeholders available in punishment messages/screens:
+#    <player> <uuid> <reason> <operator> <hacktype> <vl>
+#    <id> <type> <created> <expires> <duration> <remaining>
+# =====================================================================
+
+database:
+  host: "localhost"
+  port: 3306
+  database: "freshwaterbanx"
+  username: "root"
+  password: ""
+  pool-size: 10
+  table-prefix: "fbx_"
+  use-ssl: false
+
+# Disconnect screens shown to players.
+messages:
+  screens:
+    ban: |
+      <red><bold>You are permanently banned!</bold></red>
+
+      <gray>Reason:</gray> <white><reason></white>
+      <gray>Ban ID:</gray> <white>#<id></white>
+
+      <yellow>Appeal at: discord.gg/yourserver</yellow>
+    tempban: |
+      <red><bold>You are temporarily banned!</bold></red>
+
+      <gray>Reason:</gray> <white><reason></white>
+      <gray>Expires:</gray> <white><expires></white>
+      <gray>Time left:</gray> <white><remaining></white>
+      <gray>Ban ID:</gray> <white>#<id></white>
+
+      <yellow>Appeal at: discord.gg/yourserver</yellow>
+    kick: |
+      <red><bold>You have been kicked!</bold></red>
+
+      <gray>Reason:</gray> <white><reason></white>
+
+  # Chat feedback for commands and broadcasts.
+  feedback:
+    default-reason: "Cheating"
+    no-permission: "<red>You don't have permission to do that."
+    player-not-found: "<red>Player <yellow><target></yellow> was not found."
+    usage-ban: "<red>Usage: /ban <player> [reason]"
+    usage-tempban: "<red>Usage: /tempban <player> <duration> [reason] <gray>(e.g. 1d2h30m)"
+    usage-kick: "<red>Usage: /kick <player> [reason]"
+    usage-unban: "<red>Usage: /unban <player>"
+    usage-baninfo: "<red>Usage: /baninfo <player>"
+    invalid-duration: "<red>Invalid duration: <yellow><input></yellow> <gray>(use e.g. 30m, 1d12h, 2w)"
+    ban-success: "<green>Permanently banned <yellow><player></yellow> <gray>(#<id>)</gray> for <white><reason></white>."
+    tempban-success: "<green>Banned <yellow><player></yellow> for <white><duration></white> <gray>(#<id>)</gray> - <white><reason></white>."
+    kick-success: "<green>Kicked <yellow><player></yellow> - <white><reason></white>."
+    kick-offline: "<red>That player is not online."
+    unban-success: "<green>Unbanned <yellow><target></yellow>."
+    unban-none: "<yellow><target></yellow> <red>is not currently banned."
+    baninfo-none: "<yellow><target></yellow> <green>is not currently banned."
+    baninfo-line: |
+      <gold>Ban #<id></gold> <gray>-</gray> <yellow><player></yellow>
+      <gray>Type:</gray> <white><type></white> <gray>| Source: <white><operator></white>
+      <gray>Reason:</gray> <white><reason></white>
+      <gray>Hack:</gray> <white><hacktype></white> <gray>(VL <vl>)
+      <gray>Created:</gray> <white><created></white>
+      <gray>Expires:</gray> <white><expires></white> <gray>(<remaining>)
+    banlist-empty: "<green>There are no active bans."
+    banlist-header: "<gold>Active bans (<yellow><count></yellow>):</gold>"
+    banlist-line: "<gray>#<id></gray> <yellow><player></yellow> <gray>-</gray> <white><type></white> <gray>-</gray> <white><reason></white> <gray>(<remaining>)</gray>"
+    banlist-truncated: "<gray>... and <yellow><remaining></yellow> more."
+    broadcast-ban: "<dark_red>[BanX]</dark_red> <yellow><player></yellow> <red>was permanently banned</red> <gray>(<reason>)"
+    broadcast-tempban: "<dark_red>[BanX]</dark_red> <yellow><player></yellow> <red>was banned for <duration></red> <gray>(<reason>)"
+    broadcast-kick: "<dark_red>[BanX]</dark_red> <yellow><player></yellow> <red>was kicked</red> <gray>(<reason>)"
+    reload-success: "<green>FreshwaterBanX configuration reloaded."
+    reload-failed: "<red>Reload failed; check the console."
+    help: |
+      <gold>FreshwaterBanX commands:</gold>
+      <yellow>/ban <player> [reason]</yellow> <gray>- permanent ban
+      <yellow>/tempban <player> <duration> [reason]</yellow> <gray>- temp ban
+      <yellow>/kick <player> [reason]</yellow> <gray>- kick
+      <yellow>/unban <player></yellow> <gray>- remove a ban
+      <yellow>/banlist</yellow> <gray>- list active bans
+      <yellow>/baninfo <player></yellow> <gray>- ban details
+      <yellow>/fbanx reload</yellow> <gray>- reload config
+
+# Broadcast punishments to staff with the 'freshwaterbanx.notify' permission.
+notifications:
+  broadcast: true
+
+# Built-in JSON REST API.
+#   GET /api/bans            -> active ban list
+#   GET /api/bans/{uuid}     -> single player ban
+#   GET /api/stats/today     -> today's ban count
+# When 'token' is set, send header: Authorization: Bearer <token>
+http-api:
+  enabled: false
+  bind: "0.0.0.0"
+  port: 8085
+  token: "change-me"
+
+# =====================================================================
+#  VL threshold rules.
+#  When Matrix forwards a violation, the highest tier whose 'vl' is
+#  <= the player's current violation level is applied.
+#  'action' is one of: KICK, TEMPBAN, BAN
+#  'duration' is required for TEMPBAN (e.g. 10m, 1d, 2w).
+#  Keys are Matrix HackType names (e.g. KILLAURA, SPEED, FLY...);
+#  'default' applies to any hack type without its own ruleset.
+# =====================================================================
+rules:
+  default:
+    - { vl: 15, action: KICK, reason: "Suspicious activity" }
+    - { vl: 30, action: TEMPBAN, duration: 1h, reason: "Cheating" }
+    - { vl: 60, action: BAN, reason: "Confirmed cheating" }
+
+  KILLAURA:
+    - { vl: 10, action: KICK, reason: "Combat irregularity" }
+    - { vl: 20, action: TEMPBAN, duration: 1d, reason: "Kill Aura" }
+    - { vl: 35, action: BAN, reason: "Kill Aura" }
+
+  SPEED:
+    - { vl: 20, action: KICK, reason: "Movement irregularity" }
+    - { vl: 40, action: TEMPBAN, duration: 2h, reason: "Speed hacks" }
+
+  FLY:
+    - { vl: 15, action: KICK, reason: "Movement irregularity" }
+    - { vl: 30, action: BAN, reason: "Fly hacks" }
+
+  SCAFFOLD:
+    - { vl: 20, action: KICK, reason: "Scaffold" }
+    - { vl: 40, action: TEMPBAN, duration: 12h, reason: "Scaffold" }
