@@ -26,6 +26,7 @@ import java.util.UUID;
 public final class PunishmentService {
 
     public static final String PERMISSION_NOTIFY = "freshwaterbanx.notify";
+    public static final String PERMISSION_BYPASS = "freshwaterbanx.bypass";
 
     private final ProxyServer proxy;
     private final Database database;
@@ -112,6 +113,11 @@ public final class PunishmentService {
 
     /** Applies the configured rule for a forwarded Matrix violation. */
     public void handleViolation(ViolationMessage vm) {
+        // Players with the bypass permission are never auto-punished (applies to all transports).
+        Optional<Player> online = proxy.getPlayer(vm.playerId());
+        if (online.isPresent() && online.get().hasPermission(PERMISSION_BYPASS)) {
+            return;
+        }
         Optional<RuleTier> tierOpt = PunishmentDecider.decide(config, vm.hackType(), vm.violations());
         if (tierOpt.isEmpty()) {
             return;

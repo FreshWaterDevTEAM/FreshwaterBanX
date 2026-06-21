@@ -2,9 +2,12 @@ package io.freshwater.banx.velocity.http;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import io.freshwater.banx.api.BanEntry;
+import io.freshwater.banx.common.ViolationMessage;
 import io.freshwater.banx.velocity.punish.PunishmentService;
 import org.slf4j.Logger;
 
@@ -25,9 +28,10 @@ import java.util.stream.Collectors;
  * Minimal JSON REST API exposing ban data, backed by the JDK's built-in HTTP server.
  *
  * <ul>
- *   <li>GET /api/bans            - all active bans</li>
- *   <li>GET /api/bans/{uuid}     - active ban for a player (+ remaining time)</li>
- *   <li>GET /api/stats/today     - number of players banned today</li>
+ *   <li>GET  /api/bans            - all active bans</li>
+ *   <li>GET  /api/bans/{uuid}     - active ban for a player (+ remaining time)</li>
+ *   <li>GET  /api/stats/today     - number of players banned today</li>
+ *   <li>POST /api/violation       - ingest a Matrix violation (used by the bridge over HTTP)</li>
  * </ul>
  *
  * If a token is configured, requests must send {@code Authorization: Bearer <token>}.
@@ -55,6 +59,7 @@ public final class HttpApiServer {
         server = HttpServer.create(new InetSocketAddress(bind, port), 0);
         server.createContext("/api/bans", this::handleBans);
         server.createContext("/api/stats/today", this::handleToday);
+        server.createContext("/api/violation", this::handleViolation);
         server.setExecutor(Executors.newFixedThreadPool(2, r -> {
             Thread t = new Thread(r, "FreshwaterBanX-Http");
             t.setDaemon(true);
@@ -71,7 +76,7 @@ public final class HttpApiServer {
     }
 
     private void handleBans(HttpExchange exchange) throws IOException {
-        if (reject(exchange)) {
+        if (reject(exchange, "GET")) {
             return;
         }
         try {
@@ -107,7 +112,7 @@ public final class HttpApiServer {
     }
 
     private void handleToday(HttpExchange exchange) throws IOException {
-        if (reject(exchange)) {
+        if (reject(exchange, "GET")) {
             return;
         }
         try {
@@ -121,9 +126,39 @@ public final class HttpApiServer {
         }
     }
 
+    private void handleViolation(HttpExchange exchange) throws IOException {
+        if (reject(exchange, "POST")) {
+            return;
+        }
+        try {
+            String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            JsonObject json = JsonParser.parseString(body).getAsJsonObject();
+            UUID uuid = UUID.fromString(json.get("uuid").getAsString());
+            String name = optString(json, "name", "");
+            String hackType = optString(json, "hackType", "UNKNOWN");
+            int violations = json.has("violations") && !json.get("violations").isJsonNull()
+                    ? json.get("violations").getAsInt() : 0;
+            String message = optString(json, "message", "");
+            String serverName = optString(json, "server", "");
+
+            ViolationMessage vm = new ViolationMessage(uuid, name, hackType, violations, message, serverName);
+            service.handleViolation(vm);
+            respond(exchange, 200, Map.of("applied", true));
+        } catch (IllegalArgumentException | NullPointerException e) {
+            respond(exchange, 400, Map.of("error", "invalid payload"));
+        } catch (Exception e) {
+            logger.error("HTTP /api/violation error", e);
+            respond(exchange, 500, Map.of("error", "internal error"));
+        }
+    }
+
+    private static String optString(JsonObject json, String key, String def) {
+        return json.has(key) && !json.get(key).isJsonNull() ? json.get(key).getAsString() : def;
+    }
+
     /** Returns true if the request was rejected (method/auth) and a response was already sent. */
-    private boolean reject(HttpExchange exchange) throws IOException {
-        if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+    private boolean reject(HttpExchange exchange, String method) throws IOException {
+        if (!method.equalsIgnoreCase(exchange.getRequestMethod())) {
             respond(exchange, 405, Map.of("error", "method not allowed"));
             return true;
         }

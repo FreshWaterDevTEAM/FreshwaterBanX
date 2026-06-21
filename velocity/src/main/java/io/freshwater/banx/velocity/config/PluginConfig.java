@@ -36,11 +36,17 @@ public final class PluginConfig {
     private final int httpPort;
     private final String httpToken;
     private final boolean broadcastEnabled;
+    private final boolean bridgeSyncEnabled;
+    private final boolean bridgeCancelMatrix;
+    private final int bridgeMinViolations;
+    private final boolean bridgeDebug;
     private final Map<String, List<RuleTier>> rules;
 
     private PluginConfig(DatabaseSettings database, String banScreen, String tempbanScreen, String kickScreen,
                          Map<String, String> messages, boolean httpEnabled, String httpBind, int httpPort,
-                         String httpToken, boolean broadcastEnabled, Map<String, List<RuleTier>> rules) {
+                         String httpToken, boolean broadcastEnabled, boolean bridgeSyncEnabled,
+                         boolean bridgeCancelMatrix, int bridgeMinViolations, boolean bridgeDebug,
+                         Map<String, List<RuleTier>> rules) {
         this.database = database;
         this.banScreen = banScreen;
         this.tempbanScreen = tempbanScreen;
@@ -51,6 +57,10 @@ public final class PluginConfig {
         this.httpPort = httpPort;
         this.httpToken = httpToken;
         this.broadcastEnabled = broadcastEnabled;
+        this.bridgeSyncEnabled = bridgeSyncEnabled;
+        this.bridgeCancelMatrix = bridgeCancelMatrix;
+        this.bridgeMinViolations = bridgeMinViolations;
+        this.bridgeDebug = bridgeDebug;
         this.rules = rules;
     }
 
@@ -88,6 +98,23 @@ public final class PluginConfig {
 
     public boolean broadcastEnabled() {
         return broadcastEnabled;
+    }
+
+    /** Whether the proxy is the source of truth for bridge config and should push it to backends. */
+    public boolean bridgeSyncEnabled() {
+        return bridgeSyncEnabled;
+    }
+
+    public boolean bridgeCancelMatrix() {
+        return bridgeCancelMatrix;
+    }
+
+    public int bridgeMinViolations() {
+        return bridgeMinViolations;
+    }
+
+    public boolean bridgeDebug() {
+        return bridgeDebug;
     }
 
     /** Returns the configured message template for a key, or the key wrapped in brackets if missing. */
@@ -158,10 +185,17 @@ public final class PluginConfig {
 
         boolean broadcast = bool(section(root, "notifications"), "broadcast", true);
 
+        Map<String, Object> bridgeSync = section(root, "bridge-sync");
+        boolean bridgeSyncEnabled = bool(bridgeSync, "enabled", true);
+        boolean bridgeCancelMatrix = bool(bridgeSync, "cancel-matrix-commands", true);
+        int bridgeMinViolations = integer(bridgeSync, "min-violations-to-forward", 1);
+        boolean bridgeDebug = bool(bridgeSync, "debug", false);
+
         Map<String, List<RuleTier>> rules = parseRules(section(root, "rules"), logger);
 
         return new PluginConfig(database, banScreen, tempScreen, kickScreen, messages,
-                httpEnabled, httpBind, httpPort, httpToken, broadcast, rules);
+                httpEnabled, httpBind, httpPort, httpToken, broadcast, bridgeSyncEnabled,
+                bridgeCancelMatrix, bridgeMinViolations, bridgeDebug, rules);
     }
 
     private static Map<String, List<RuleTier>> parseRules(Map<String, Object> rulesSection, Logger logger) {

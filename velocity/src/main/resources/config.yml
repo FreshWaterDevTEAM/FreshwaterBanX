@@ -100,6 +100,24 @@ http-api:
   token: "change-me"
 
 # =====================================================================
+#  Bridge config sync (single source of truth).
+#  These values are pushed down to EVERY Paper bridge automatically, so
+#  you only ever edit them here -- no need to touch each sub-server.
+#  Bridges fetch the config when a player joins; running '/fbanx reload'
+#  pushes it to all online backends immediately. In nested setups the
+#  Waterfall relay forwards these packets down to the Paper servers.
+#  (Each bridge keeps 'sync-from-proxy: true' to honour these.)
+# =====================================================================
+bridge-sync:
+  enabled: true
+  # Cancel Matrix's own kick/ban command on the backend (let the proxy decide).
+  cancel-matrix-commands: true
+  # Bridges drop violations below this VL before forwarding (1 = forward all).
+  min-violations-to-forward: 1
+  # Verbose bridge logging.
+  debug: false
+
+# =====================================================================
 #  VL threshold rules.
 #  When Matrix forwards a violation, the highest tier whose 'vl' is
 #  <= the player's current violation level is applied.

@@ -66,6 +66,7 @@ public final class ViolationMessage {
     public byte[] toBytes() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (DataOutputStream out = new DataOutputStream(baos)) {
+            out.writeInt(Protocol.TYPE_VIOLATION);
             out.writeInt(Protocol.VERSION);
             out.writeLong(playerId.getMostSignificantBits());
             out.writeLong(playerId.getLeastSignificantBits());
@@ -83,6 +84,10 @@ public final class ViolationMessage {
     /** Parses a {@link ViolationMessage} from a plugin message payload, or returns {@code null} on mismatch. */
     public static ViolationMessage fromBytes(byte[] data) {
         try (DataInputStream in = new DataInputStream(new ByteArrayInputStream(data))) {
+            int type = in.readInt();
+            if (type != Protocol.TYPE_VIOLATION) {
+                return null;
+            }
             int version = in.readInt();
             if (version != Protocol.VERSION) {
                 return null;

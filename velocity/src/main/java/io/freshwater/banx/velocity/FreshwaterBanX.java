@@ -27,6 +27,7 @@ import io.freshwater.banx.velocity.listener.MatrixMessageListener;
 import io.freshwater.banx.velocity.punish.MessageRenderer;
 import io.freshwater.banx.velocity.punish.PunishmentService;
 import io.freshwater.banx.velocity.storage.Database;
+import io.freshwater.banx.velocity.sync.BridgeSync;
 import org.slf4j.Logger;
 
 import java.nio.file.Path;
@@ -46,6 +47,7 @@ public final class FreshwaterBanX {
 
     private Database database;
     private PunishmentService service;
+    private BridgeSync bridgeSync;
     private HttpApiServer httpServer;
     private boolean active;
 
@@ -78,11 +80,14 @@ public final class FreshwaterBanX {
         service = new PunishmentService(proxy, database, renderer, logger, config);
 
         // Plugin message channel from the Paper bridge.
-        proxy.getChannelRegistrar().register(
-                MinecraftChannelIdentifier.create(Protocol.CHANNEL_NAMESPACE, Protocol.CHANNEL_NAME));
+        MinecraftChannelIdentifier channel =
+                MinecraftChannelIdentifier.create(Protocol.CHANNEL_NAMESPACE, Protocol.CHANNEL_NAME);
+        proxy.getChannelRegistrar().register(channel);
+
+        bridgeSync = new BridgeSync(proxy, service, channel, logger);
 
         proxy.getEventManager().register(this, new LoginListener(service, logger));
-        proxy.getEventManager().register(this, new MatrixMessageListener(this, proxy, service, logger));
+        proxy.getEventManager().register(this, new MatrixMessageListener(this, proxy, service, bridgeSync, logger));
 
         registerCommands();
 
@@ -123,6 +128,9 @@ public final class FreshwaterBanX {
         PluginConfig config = PluginConfig.load(dataDirectory, logger);
         if (service != null) {
             service.setConfig(config);
+        }
+        if (bridgeSync != null) {
+            bridgeSync.pushToAll();
         }
         logger.info("FreshwaterBanX configuration reloaded.");
     }

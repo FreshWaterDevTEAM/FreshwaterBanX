@@ -30,4 +30,5 @@ jobs:
           path: |
             velocity/build/libs/FreshwaterBanX-*.jar
             bridge/build/libs/FreshwaterBanX-Bridge-*.jar
+            waterfall/build/libs/FreshwaterBanX-Waterfall-*.jar
           if-no-files-found: error

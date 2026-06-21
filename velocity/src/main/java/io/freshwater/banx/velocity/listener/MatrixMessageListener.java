@@ -8,6 +8,7 @@ import com.velocitypowered.api.proxy.ServerConnection;
 import io.freshwater.banx.common.Protocol;
 import io.freshwater.banx.common.ViolationMessage;
 import io.freshwater.banx.velocity.punish.PunishmentService;
+import io.freshwater.banx.velocity.sync.BridgeSync;
 import org.slf4j.Logger;
 
 import java.util.Optional;
@@ -23,12 +24,15 @@ public final class MatrixMessageListener {
     private final Object plugin;
     private final ProxyServer proxy;
     private final PunishmentService service;
+    private final BridgeSync bridgeSync;
     private final Logger logger;
 
-    public MatrixMessageListener(Object plugin, ProxyServer proxy, PunishmentService service, Logger logger) {
+    public MatrixMessageListener(Object plugin, ProxyServer proxy, PunishmentService service,
+                                 BridgeSync bridgeSync, Logger logger) {
         this.plugin = plugin;
         this.proxy = proxy;
         this.service = service;
+        this.bridgeSync = bridgeSync;
         this.logger = logger;
     }
 
@@ -41,7 +45,13 @@ public final class MatrixMessageListener {
         event.setResult(PluginMessageEvent.ForwardResult.handled());
 
         // Only trust messages coming from a backend server connection.
-        if (!(event.getSource() instanceof ServerConnection)) {
+        if (!(event.getSource() instanceof ServerConnection connection)) {
+            return;
+        }
+
+        // A backend asking for its synced configuration.
+        if (Protocol.peekType(event.getData()) == Protocol.TYPE_CONFIG_REQUEST) {
+            bridgeSync.replyTo(connection);
             return;
         }
 

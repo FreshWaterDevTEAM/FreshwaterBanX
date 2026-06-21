@@ -3,16 +3,37 @@
 # Master switch for the bridge.
 enabled: true
 
-# Cancel Matrix's own punishment commands (PlayerViolationCommandEvent) so that all
+# Sync config from the Velocity proxy (single source of truth).
+# When true, the values below marked [synced] are overridden by whatever you set in the
+# Velocity config.yml ('bridge-sync' section) -- so you only edit the proxy, never each
+# sub-server. The local values are used until the first sync (and as a fallback).
+# Requires transport to include 'plugin-message' (and the Waterfall relay for nested proxies).
+sync-from-proxy: true
+
+# [synced] Cancel Matrix's own punishment commands (PlayerViolationCommandEvent) so that all
 # kick/ban decisions are made by the FreshwaterBanX Velocity plugin instead.
 cancel-matrix-commands: true
 
-# Only forward a violation to the proxy once the player's VL reaches this value.
+# [synced] Only forward a violation to the proxy once the player's VL reaches this value.
 # Lower = more messages but faster reaction; the proxy still decides the final action.
 min-violations-to-forward: 1
+
+# How violations reach the Velocity plugin:
+#   plugin-message : native Minecraft plugin messaging (default).
+#                    For Velocity -> Waterfall -> Paper, also install FreshwaterBanX-Waterfall.
+#   http           : POST directly to the Velocity HTTP API (bypasses proxy relaying).
+#                    Requires http-api enabled on Velocity and the settings below.
+#   both           : send via both transports.
+transport: plugin-message
+
+http:
+  # Velocity HTTP API base URL (no trailing path), e.g. http://10.0.0.5:8085
+  url: ""
+  # Must match 'http-api.token' in the Velocity config.yml.
+  token: ""
 
 # Optional label for this backend server, included in forwarded messages (purely informational).
 server-name: ""
 
-# Log every forwarded violation to the console.
+# [synced] Log every forwarded violation to the console.
 debug: false
