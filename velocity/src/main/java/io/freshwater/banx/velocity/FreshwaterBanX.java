@@ -35,7 +35,7 @@ import java.nio.file.Path;
 @Plugin(
         id = "freshwaterbanx",
         name = "FreshwaterBanX",
-        version = "1.0.0",
+        version = "1.1.0",
         description = "Ban/kick management for Velocity, integrated with the Matrix anti-cheat.",
         authors = {"FreshwaterIsland"}
 )

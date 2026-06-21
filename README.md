@@ -37,9 +37,9 @@ Matrix -> Bridge(Paper) --插件消息--> FreshwaterBanX-Waterfall(中继一跳)
 
 产物：
 
-- `velocity/build/libs/FreshwaterBanX-1.0.0.jar` —— 安装到 Velocity 代理端。
-- `bridge/build/libs/FreshwaterBanX-Bridge-1.0.0.jar` —— 安装到每个运行 Matrix 的后端服。
-- `waterfall/build/libs/FreshwaterBanX-Waterfall-1.0.0.jar` —— 仅嵌套代理时，安装到每个 Waterfall。
+- `velocity/build/libs/FreshwaterBanX-1.1.0.jar` —— 安装到 Velocity 代理端。
+- `bridge/build/libs/FreshwaterBanX-Bridge-1.1.0.jar` —— 安装到每个运行 Matrix 的后端服。
+- `waterfall/build/libs/FreshwaterBanX-Waterfall-1.1.0.jar` —— 仅嵌套代理时，安装到每个 Waterfall。
 
 > 桥接插件基于内置的 Matrix API 编译期桩（`bridge/src/matrixStub`）编译，因此**无需** Matrix 商业 jar 即可构建。运行时使用真实的 Matrix 类（桥接插件 `softdepend` 于 Matrix）。
 
