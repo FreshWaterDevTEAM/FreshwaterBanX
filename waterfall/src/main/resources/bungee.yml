@@ -1,5 +1,5 @@
 name: FreshwaterBanX-Waterfall
 main: io.freshwater.banx.waterfall.FreshwaterBanXWaterfall
-version: 1.1.0
+version: 1.2.0
 author: FreshwaterIsland
 description: Relays Matrix violations from backend servers up to the Velocity FreshwaterBanX plugin.

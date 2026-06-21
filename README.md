@@ -5,6 +5,7 @@
 - **FreshwaterBanX**（Velocity 插件）——将处罚记录存入 MySQL，按可配置的 VL 阈值决定踢出 / 临时封禁 / 永久封禁，在登录时拦截被封玩家，渲染完全可自定义的 MiniMessage 断开连接界面，并对外提供 HTTP REST API 与 Java API。
 - **FreshwaterBanX-Bridge**（Paper/Spigot 插件）——运行在每个后端服上（与 Matrix 同服），监听 Matrix 的违规事件，取消 Matrix 自带的处罚命令，并把违规转发给代理端；还会从 Velocity 自动同步配置，无需逐服维护。
 - **FreshwaterBanX-Waterfall**（Waterfall/BungeeCord 插件，可选）——仅当你是 `Velocity -> Waterfall -> Paper` 这种嵌套代理时需要，把后端的违规插件消息再往上中继一跳到 Velocity。
+- **FreshwaterBanX-VelocityRelay**（Velocity 插件，可选）——仅当你是 `Velocity -> Velocity -> Paper`（Velocity 套 Velocity）这种嵌套代理时需要，装在**中间层** Velocity 上，把通道消息双向中继一跳。
 
 ## 为什么是多个插件？
 
@@ -23,9 +24,25 @@ Matrix(后端)  ->  FreshwaterBanX-Bridge  --插件消息-->  FreshwaterBanX(Vel
 Matrix -> Bridge(Paper) --插件消息--> FreshwaterBanX-Waterfall(中继一跳) --> FreshwaterBanX(Velocity)
 ```
 
+嵌套拓扑（Velocity -> Velocity -> Paper，即 Velocity 套 Velocity）：同理，在**中间层** Velocity 上装中继插件，把消息再送一跳给顶层 Velocity。
+
+```
+Matrix -> Bridge(Paper) --插件消息--> FreshwaterBanX-VelocityRelay(中间层 Velocity，中继一跳) --> FreshwaterBanX(顶层 Velocity)
+```
+
 所有处罚决策都在顶层 Velocity 做出，因此一个被封玩家会被整个群组服拦截，无论他尝试进入哪个后端。
 
-> 不想装 Waterfall 中继插件？也可以让 Bridge 改走 HTTP 直接上报到 Velocity（点对点，绕开代理转发）。见下方“嵌套代理”说明。
+> 不想装中继插件？也可以让 Bridge 改走 HTTP 直接上报到顶层 Velocity（点对点，绕开所有中间代理）。见下方“嵌套代理”说明。
+
+## 按拓扑选择要装哪些插件
+
+| 你的架构 | 顶层 Velocity | 中间层 | 后端 Paper |
+| --- | --- | --- | --- |
+| `Velocity -> Paper` | FreshwaterBanX | —— | Bridge |
+| `Velocity -> Waterfall -> Paper` | FreshwaterBanX | Waterfall: FreshwaterBanX-Waterfall | Bridge |
+| `Velocity -> Velocity -> Paper`（套娃） | FreshwaterBanX | 中间 Velocity: FreshwaterBanX-VelocityRelay | Bridge |
+
+完整的 `FreshwaterBanX` 永远只装在**最顶层** Velocity；每多一层中间代理，就在那一层装对应的中继插件。所有中间代理都不想装中继时，可统一让 Bridge 走 HTTP 直传（见“嵌套代理”方式 B）。
 
 ## 构建
 
@@ -37,9 +54,10 @@ Matrix -> Bridge(Paper) --插件消息--> FreshwaterBanX-Waterfall(中继一跳)
 
 产物：
 
-- `velocity/build/libs/FreshwaterBanX-1.1.0.jar` —— 安装到 Velocity 代理端。
-- `bridge/build/libs/FreshwaterBanX-Bridge-1.1.0.jar` —— 安装到每个运行 Matrix 的后端服。
-- `waterfall/build/libs/FreshwaterBanX-Waterfall-1.1.0.jar` —— 仅嵌套代理时，安装到每个 Waterfall。
+- `velocity/build/libs/FreshwaterBanX-1.2.0.jar` —— 安装到（顶层）Velocity 代理端。
+- `bridge/build/libs/FreshwaterBanX-Bridge-1.2.0.jar` —— 安装到每个运行 Matrix 的后端服。
+- `waterfall/build/libs/FreshwaterBanX-Waterfall-1.2.0.jar` —— 仅 `Velocity -> Waterfall -> Paper` 时，安装到每个 Waterfall。
+- `velocity-relay/build/libs/FreshwaterBanX-VelocityRelay-1.2.0.jar` —— 仅 `Velocity -> Velocity -> Paper` 时，安装到每个中间层 Velocity。
 
 > 桥接插件基于内置的 Matrix API 编译期桩（`bridge/src/matrixStub`）编译，因此**无需** Matrix 商业 jar 即可构建。运行时使用真实的 Matrix 类（桥接插件 `softdepend` 于 Matrix）。
 
@@ -72,6 +90,16 @@ http:
 
 Bridge 会直接把违规 POST 到 `http://<velocity地址>:8085/api/violation`，完全绕开代理转发。
 
+### 嵌套代理（Velocity -> Velocity -> Paper，Velocity 套 Velocity）
+
+这种拓扑下，Paper 的插件消息只到达中间层 Velocity。处理方式：
+
+**方式 A（推荐，原生插件消息）：** 完整的 `FreshwaterBanX-*.jar` 只装在**顶层** Velocity；在每个**中间层** Velocity 上装 `FreshwaterBanX-VelocityRelay-*.jar`。中继插件会把 `freshwaterbanx:matrix` 消息双向中继一跳（违规上行、配置下发都自动处理），无需额外配置。后端 Paper 仍只装 Bridge。
+
+> 顶层与中间层之间需正常配置玩家信息转发（modern 转发，密钥一致），这是插件消息通信所必需的。
+
+**方式 B（HTTP 直传）：** 同上方 Waterfall 的“方式 B”，让 Bridge 走 HTTP 直接上报到顶层 Velocity，绕开所有中间代理。
+
 ## 子服配置同步（以 Velocity 为唯一配置源）
 
 不想逐个改每个后端 Bridge 的配置？开启配置同步后，**只改 Velocity 的 `config.yml` 即可**，所有后端自动跟随。
@@ -86,7 +114,7 @@ bridge-sync:
   debug: false                      # 后端详细日志
 ```
 
-后端 Bridge 默认 `sync-from-proxy: true`，会在玩家加入时向代理请求一次配置；执行 `/fbanx reload` 时，代理会立即把最新配置推给所有在线后端。嵌套代理（Velocity -> Waterfall -> Paper）下，Waterfall 中继插件会自动把配置包**双向**转发，无需额外设置。
+后端 Bridge 默认 `sync-from-proxy: true`，会在玩家加入时向代理请求一次配置；执行 `/fbanx reload` 时，代理会立即把最新配置推给所有在线后端。嵌套代理（`Velocity -> Waterfall -> Paper` 或 `Velocity -> Velocity -> Paper`）下，对应的中继插件会自动把配置包**双向**转发，无需额外设置。
 
 > 同步只覆盖上表里标注 `[synced]` 的几项行为配置；`transport`、`http`、`server-name` 等连接类设置仍保留在各后端本地（因为它们因服而异）。若某个后端想用自己的配置，把它的 `sync-from-proxy` 设为 `false` 即可。
 

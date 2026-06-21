@@ -29,6 +29,7 @@ jobs:
           name: FreshwaterBanX-plugins
           path: |
             velocity/build/libs/FreshwaterBanX-*.jar
+            velocity-relay/build/libs/FreshwaterBanX-VelocityRelay-*.jar
             bridge/build/libs/FreshwaterBanX-Bridge-*.jar
             waterfall/build/libs/FreshwaterBanX-Waterfall-*.jar
           if-no-files-found: error
